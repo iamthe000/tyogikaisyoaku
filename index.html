@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>超議会掌握</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+        h1, h2 {
+            text-align: center;
+            color: #1a237e;
+        }
+        h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* --- Setup Screen --- */
+        #setup-screen {
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .form-group label {
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .form-group input[type="text"], .form-group input[type="color"] {
+            padding: 12px;
+            border-radius: 6px;
+            border: 2px solid #ddd;
+            width: 300px;
+            font-size: 16px;
+        }
+        .form-group input[type="color"] {
+            height: 50px;
+            cursor: pointer;
+        }
+        .logo-upload {
+            margin-top: 10px;
+        }
+        .logo-upload input[type="file"] {
+            display: none;
+        }
+        .logo-upload label {
+            padding: 10px 20px;
+            background-color: #6c757d;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            display: inline-block;
+            transition: background-color 0.3s;
+        }
+        .logo-upload label:hover {
+            background-color: #5a6268;
+        }
+        #logo-preview {
+            margin-top: 15px;
+            max-width: 120px;
+            max-height: 120px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            display: none;
+        }
+        button {
+            padding: 14px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* --- Game Screen --- */
+        #game-screen {
+            display: none;
+        }
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding: 15px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 10px;
+            color: white;
+        }
+        #turn-counter {
+            font-size: 26px;
+            font-weight: bold;
+        }
+        #phase-indicator {
+            font-size: 20px;
+            font-weight: 600;
+            padding: 8px 16px;
+            background-color: rgba(255,255,255,0.3);
+            border-radius: 6px;
+        }
+        .total-seats-info {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        /* 議席可視化エリア */
+        .seats-visualization {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .seats-visualization h3 {
+            text-align: center;
+            margin-top: 0;
+            color: #1a237e;
+        }
+        .visualization-container {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+        #seats-chart {
+            flex: 1;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .seats-bars {
+            flex: 2;
+        }
+        .seat-bar {
+            margin-bottom: 15px;
+        }
+        .seat-bar-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .seat-bar-container {
+            height: 30px;
+            background-color: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+        .seat-bar-fill {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-weight: bold;
+            transition: width 0.5s ease;
+        }
+
+        .party-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .party-card {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            background-color: #fafafa;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s;
+        }
+        .party-card:hover {
+            transform: scale(1.05);
+        }
+        .party-card.current-player {
+            border-color: #ffd700;
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+        }
+        .party-card .party-color-bar {
+            height: 12px;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        .party-card img {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            margin-top: 15px;
+        }
+        .party-card .party-name {
+            font-weight: bold;
+            margin: 8px 0;
+            font-size: 15px;
+        }
+        .party-card .party-seats {
+            font-size: 26px;
+            font-weight: bold;
+            color: #0d47a1;
+        }
+        .party-card .party-power {
+            font-size: 14px;
+            color: #d32f2f;
+            margin-top: 5px;
+        }
+
+        .main-content {
+            display: flex;
+            gap: 25px;
+        }
+        .map-container {
+            flex: 3;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        .region {
+            border: 3px solid #ccc;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background-color: #fff;
+        }
+        .region:hover {
+            border-color: #007bff;
+            box-shadow: 0 0 15px rgba(0, 123, 255, 0.5);
+            transform: translateY(-3px);
+        }
+        .region.selected {
+            border-color: #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+            transform: translateY(-5px);
+        }
+        .region-name {
+            font-weight: bold;
+            font-size: 17px;
+        }
+        .region-seats {
+            font-size: 14px;
+            color: #555;
+            margin: 5px 0;
+        }
+        .region-support {
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        .support-bar {
+            display: flex;
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 8px;
+            background-color: #e9ecef;
+        }
+        .support-segment {
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+
+        .action-panel {
+            flex: 2;
+            padding: 25px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+        }
+        .action-panel h3 {
+            margin-top: 0;
+            text-align: center;
+            color: #333;
+            font-size: 22px;
+        }
+        .action-panel p {
+            text-align: center;
+            font-size: 15px;
+            color: #444;
+            min-height: 50px;
+            font-weight: 500;
+        }
+        .action-buttons button {
+            display: block;
+            width: 100%;
+            margin-bottom: 12px;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-size: 16px;
+        }
+        .action-buttons button:hover:not(:disabled) {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }
+        .action-buttons button.scandal {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .action-buttons button.scandal:hover:not(:disabled) {
+            background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+        }
+
+        #log {
+            margin-top: 25px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            height: 180px;
+            overflow-y: scroll;
+            background-color: #f8f9fa;
+            font-size: 14px;
+        }
+        .log-entry {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            line-height: 1.5;
+        }
+        .log-entry.player { font-weight: bold; color: #0056b3; }
+        .log-entry.cpu { color: #555; }
+        .log-entry.system { font-style: italic; color: #d32f2f; }
+        .log-entry.scandal { color: #c62828; font-weight: bold; }
+
+        /* --- Result Screen --- */
+        #result-screen {
+            display: none;
+            text-align: center;
+        }
+        #result-screen h2 {
+            color: #d32f2f;
+            font-size: 36px;
+        }
+        #winner-info {
+            margin: 30px 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border-radius: 10px;
+        }
+        #winner-party-name {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        #winner-logo {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+            margin: 15px auto;
+            display: block;
+        }
+        #final-results {
+            list-style-type: none;
+            padding: 0;
+            max-width: 500px;
+            margin: 25px auto;
+        }
+        #final-results li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 2px solid #eee;
+            font-size: 18px;
+            background-color: #f8f9fa;
+            margin-bottom: 8px;
+            border-radius: 8px;
+        }
+        #final-results li:first-child {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            font-size: 22px;
+        }
+        .result-party-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .result-party-logo {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+        }
+        .party-name-result {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>超議会掌握</h1>
+
+        <div id="setup-screen">
+            <h2>あなたの政党を立ち上げよう！</h2>
+            <div class="form-group">
+                <label for="party-name-input">政党名</label>
+                <input type="text" id="party-name-input" value="みらい党">
+            </div>
+            <div class="form-group">
+                <label for="party-color-input">イメージカラー</label>
+                <input type="color" id="party-color-input" value="#ff9900">
+            </div>
+            <div class="form-group">
+                <label>政党ロゴ（任意）</label>
+                <div class="logo-upload">
+                    <input type="file" id="logo-file-input" accept="image/*">
+                    <label for="logo-file-input">📁 ロゴ画像を選択</label>
+                </div>
+                <img id="logo-preview" alt="ロゴプレビュー">
+            </div>
+            <button id="start-game-btn">ゲーム開始</button>
+        </div>
+
+        <div id="game-screen">
+            <div class="game-header">
+                <div id="turn-counter">第1ターン</div>
+                <div id="phase-indicator">あなたのターン</div>
+                <div class="total-seats-info">総議席数: 470 / 過半数: 236</div>
+            </div>
+
+            <div class="seats-visualization">
+                <h3>📊 議席配分状況</h3>
+                <div class="visualization-container">
+                    <canvas id="seats-chart"></canvas>
+                    <div class="seats-bars" id="seats-bars"></div>
+                </div>
+            </div>
+
+            <div id="party-stats-container" class="party-stats"></div>
+
+            <div class="main-content">
+                <div id="map-container" class="map-container"></div>
+                <div class="action-panel">
+                    <h3>アクション選択</h3>
+                    <p id="action-info">選挙区を選択してください</p>
+                    <div class="action-buttons">
+                        <button id="action-speech" data-action="speech" disabled>
+                            🎤 演説<br><small>支持+5% / 戦力+2</small>
+                        </button>
+                        <button id="action-policy" data-action="policy" disabled>
+                            📋 政策アピール<br><small>支持+10% / 戦力+4</small>
+                        </button>
+                        <button id="action-invest" data-action="invest" disabled>
+                            💰 集中投資<br><small>支持+15% / 戦力+7</small>
+                        </button>
+                        <button id="action-scandal" class="scandal" data-action="scandal" disabled>
+                            💥 スキャンダル暴露<br><small>他党の議席-10 / リスク有</small>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <h2>📰 活動ログ</h2>
+            <div id="log"></div>
+        </div>
+
+        <div id="result-screen">
+            <h2>🎊 選挙結果発表 🎊</h2>
+            <div id="winner-info">
+                <h3>🏆 第一党 🏆</h3>
+                <img id="winner-logo" src="" alt="勝利政党ロゴ">
+                <div id="winner-party-name"></div>
+            </div>
+            <h3>最終議席数</h3>
+            <ul id="final-results"></ul>
+            <button id="restart-game-btn">もう一度プレイ</button>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const setupScreen = document.getElementById('setup-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const startGameBtn = document.getElementById('start-game-btn');
+        const restartGameBtn = document.getElementById('restart-game-btn');
+        const partyNameInput = document.getElementById('party-name-input');
+        const partyColorInput = document.getElementById('party-color-input');
+        const logoFileInput = document.getElementById('logo-file-input');
+        const logoPreview = document.getElementById('logo-preview');
+        const turnCounter = document.getElementById('turn-counter');
+        const phaseIndicator = document.getElementById('phase-indicator');
+        const partyStatsContainer = document.getElementById('party-stats-container');
+        const mapContainer = document.getElementById('map-container');
+        const actionInfo = document.getElementById('action-info');
+        const actionButtons = document.querySelectorAll('.action-buttons button');
+        const logContainer = document.getElementById('log');
+
+        let parties = [];
+        let regions = [];
+        let currentPlayerParty = null;
+        let currentTurn = 1;
+        const maxTurns = 10;
+        let selectedRegion = null;
+        let playerLogoUrl = null;
+        let isPlayerTurn = true;
+        let seatsChart = null;
+
+        const cpuPartiesData = [
+            { id: 1, name: "自由民主党", color: "#d92f2f", imageUrl: "https://www.tokyo-jimin.jp/cms/wp-content/uploads/2023/06/3b2338c46a4bee791b4f2fa398e115d0.png" },
+
+            { id: 2, name: "立憲民主党", color: "#36a2d1", imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/%E6%96%B0%E3%83%BB%E7%AB%8B%E6%86%B2%E6%B0%91%E4%B8%BB%E5%85%9A_%E3%83%AD%E3%82%B4.svg/1986px-%E6%96%B0%E3%83%BB%E7%AB%8B%E6%86%B2%E6%B0%91%E4%B8%BB%E5%85%9A_%E3%83%AD%E3%82%B4.svg.png" },
+
+            { id: 3, name: "日本維新の会", color: "#00b33e", imageUrl: "https://o-ishin.jp/news/assets_c/2022/03/2a4ffa551bd1b9aca9dd9c8abeca040619f0503a-thumb-746x565-6388.jpg" },
+
+            { id: 4, name: "公明党", color: "#e6b422", imageUrl: "https://www.komei.or.jp/km/nichinan-kurobe-toshihiro/files/2011/07/00131.jpg" },
+
+            { id: 5, name: "国民民主党", color: "#0072bc", imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Logo_of_Democratic_Party_For_the_People.svg/2560px-Logo_of_Democratic_Party_For_the_People.svg.png" },
+
+        ];
+
+
+
+        const regionsData = [
+            { id: 'hokkaido_tohoku', name: "北海道・東北", totalSeats: 60 },
+            { id: 'kanto', name: "関東", totalSeats: 120 },
+            { id: 'chubu', name: "中部", totalSeats: 80 },
+            { id: 'kinki', name: "近畿", totalSeats: 80 },
+            { id: 'chugoku_shikoku', name: "中国・四国", totalSeats: 60 },
+            { id: 'kyushu_okinawa', name: "九州・沖縄", totalSeats: 70 },
+        ];
+
+        logoFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    playerLogoUrl = event.target.result;
+                    logoPreview.src = playerLogoUrl;
+                    logoPreview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        startGameBtn.addEventListener('click', initializeGame);
+        restartGameBtn.addEventListener('click', () => {
+            resultScreen.style.display = 'none';
+            setupScreen.style.display = 'block';
+            playerLogoUrl = null;
+            logoPreview.style.display = 'none';
+        });
+
+        actionButtons.forEach(button => {
+            button.addEventListener('click', handlePlayerAction);
+        });
+
+        function initializeGame() {
+            const playerName = partyNameInput.value.trim();
+            if (!playerName) {
+                alert("政党名を入力してください。");
+                return;
+            }
+
+            currentTurn = 1;
+            parties = [];
+            regions = [];
+            logContainer.innerHTML = '';
+            isPlayerTurn = true;
+
+            currentPlayerParty = {
+                id: 0,
+                name: playerName,
+                color: partyColorInput.value,
+                imageUrl: playerLogoUrl || 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Circle-icons-politician.svg/120px-Circle-icons-politician.svg.png',
+                isPlayer: true,
+                power: 50
+            };
+            parties.push(currentPlayerParty);
+
+            parties.push(...cpuPartiesData.map(p => ({ ...p, isPlayer: false, power: 40 + Math.floor(Math.random() * 20) })));
+
+            regionsData.forEach(rData => {
+                const support = {};
+                let remainingSupport = 100;
+                
+                const playerInitialSupport = 15 + Math.floor(Math.random() * 10);
+                support[currentPlayerParty.id] = playerInitialSupport;
+                remainingSupport -= playerInitialSupport;
+
+                const shuffledCpus = [...cpuPartiesData].sort(() => 0.5 - Math.random());
+                shuffledCpus.forEach((p, index) => {
+                    if (index === shuffledCpus.length - 1) {
+                        support[p.id] = Math.max(5, remainingSupport);
+                    } else {
+                        const randomSupport = Math.floor(Math.random() * (remainingSupport / 2));
+                        support[p.id] = randomSupport;
+                        remainingSupport -= randomSupport;
+                    }
+                });
+
+                regions.push({ ...rData, support });
+            });
+            
+            calculateAllSeats();
+            updateUI();
+            
+            setupScreen.style.display = 'none';
+            gameScreen.style.display = 'block';
+            addLog("🎬 選挙戦が開始されました！各政党は議席獲得を目指して戦います！", "system");
+        }
+
+        function updateUI() {
+            turnCounter.textContent = `第${currentTurn}ターン`;
+            phaseIndicator.textContent = isPlayerTurn ? "あなたのターン" : "CPUのターン";
+            phaseIndicator.style.backgroundColor = isPlayerTurn ? 'rgba(255,215,0,0.6)' : 'rgba(255,255,255,0.3)';
+
+            partyStatsContainer.innerHTML = '';
+            const sortedParties = [...parties].sort((a, b) => b.seats - a.seats);
+            sortedParties.forEach(party => {
+                const card = document.createElement('div');
+                card.className = 'party-card';
+                if (party.isPlayer && isPlayerTurn) {
+                    card.classList.add('current-player');
+                }
+                card.innerHTML = `
+                    <div class="party-color-bar" style="background-color: ${party.color};"></div>
+                    <img src="${party.imageUrl}" alt="${party.name}のロゴ">
+                    <div class="party-name">${party.name}</div>
+                    <div class="party-seats">${party.seats}<span style="font-size:14px">議席</span></div>
+                    <div class="party-power">⚡戦力: ${party.power}</div>
+                `;
+                partyStatsContainer.appendChild(card);
+            });
+
+            updateSeatsVisualization();
+
+            mapContainer.innerHTML = '';
+            regions.forEach(region => {
+                const regionEl = document.createElement('div');
+                regionEl.className = 'region';
+                regionEl.dataset.id = region.id;
+                if (selectedRegion && selectedRegion.id === region.id) {
+                    regionEl.classList.add('selected');
+                }
+
+                const supportBar = document.createElement('div');
+                supportBar.className = 'support-bar';
+                sortedParties.forEach(p => {
+                    const segment = document.createElement('div');
+                    segment.className = 'support-segment';
+                    segment.style.width = `${region.support[p.id]}%`;
+                    segment.style.backgroundColor = p.color;
+                    supportBar.appendChild(segment);
+                });
+                
+                const topPartyId = Object.keys(region.support).reduce((a, b) => 
+                    region.support[a] > region.support[b] ? a : b
+                );
+                const topParty = parties.find(p => p.id == topPartyId);
+
+                regionEl.innerHTML = `
+                    <div class="region-name">${region.name}</div>
+                    <div class="region-seats">総議席数: ${region.totalSeats}</div>
+                    <div class="region-support">🎯 優勢: ${topParty.name}</div>
+                `;
+                regionEl.appendChild(supportBar);
+                
+                if (isPlayerTurn) {
+                    regionEl.addEventListener('click', () => selectRegion(region));
+                }
+                mapContainer.appendChild(regionEl);
+            });
+        }
+
+        function updateSeatsVisualization() {
+            const canvas = document.getElementById('seats-chart');
+            const ctx = canvas.getContext('2d');
+            const sortedParties = [...parties].sort((a, b) => b.seats - a.seats);
+            
+            canvas.width = 300;
+            canvas.height = 300;
+            
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = 100;
+            
+            let startAngle = -Math.PI / 2;
+            const totalSeats = sortedParties.reduce((sum, p) => sum + p.seats, 0);
+            
+            sortedParties.forEach(party => {
+                const sliceAngle = (party.seats / totalSeats) * 2 * Math.PI;
+                
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
+                ctx.closePath();
+                ctx.fillStyle = party.color;
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                startAngle += sliceAngle;
+            });
+
+            const barsContainer = document.getElementById('seats-bars');
+            barsContainer.innerHTML = '';
+            sortedParties.forEach(party => {
+                const barDiv = document.createElement('div');
+                barDiv.className = 'seat-bar';
+                const percentage = (party.seats / totalSeats) * 100;
+                barDiv.innerHTML = `
+                    <div class="seat-bar-header">
+                        <span style="color: ${party.color}">${party.name}</span>
+                        <span>${party.seats}議席 (${percentage.toFixed(1)}%)</span>
+                    </div>
+                    <div class="seat-bar-container">
+                        <div class="seat-bar-fill" style="width: ${percentage}%; background-color: ${party.color};">
+                            ${party.seats}
+                        </div>
+                    </div>
+                `;
+                barsContainer.appendChild(barDiv);
+            });
+        }
+        
+        function calculateAllSeats() {
+            parties.forEach(p => p.seats = 0);
+
+            regions.forEach(region => {
+                let totalSupport = 0;
+                Object.values(region.support).forEach(s => totalSupport += s);
+                
+                parties.forEach(party => {
+                    const supportRatio = region.support[party.id] / totalSupport;
+                    const seats = Math.round(region.totalSeats * supportRatio);
+                    party.seats += seats;
+                });
+            });
+
+            const currentTotalSeats = parties.reduce((sum, p) => sum + p.seats, 0);
+            const totalSeats = regions.reduce((sum, r) => sum + r.totalSeats, 0);
+            const difference = totalSeats - currentTotalSeats;
+
+            if (difference !== 0) {
+                parties.sort((a,b) => b.seats - a.seats);
+                parties[0].seats += difference;
+            }
+        }
+
+        function selectRegion(region) {
+            if (!isPlayerTurn) return;
+            selectedRegion = region;
+            actionInfo.textContent = `「${region.name}」が選択されました。アクションを選んでください。`;
+            actionButtons.forEach(btn => btn.disabled = false);
+            updateUI();
+        }
+        
+        function handlePlayerAction(event) {
+            if (!selectedRegion || !isPlayerTurn) return;
+            
+            const action = event.target.dataset.action;
+            let supportGain = 0;
+            let powerGain = 0;
+            let actionName = '';
+
+            switch(action) {
+                case 'speech': 
+                    supportGain = 5 + Math.floor(currentPlayerParty.power / 20); 
+                    powerGain = 2;
+                    actionName = '演説'; 
+                    break;
+                case 'policy': 
+                    supportGain = 10 + Math.floor(currentPlayerParty.power / 15); 
+                    powerGain = 4;
+                    actionName = '政策アピール'; 
+                    break;
+                case 'invest': 
+                    supportGain = 15 + Math.floor(currentPlayerParty.power / 10); 
+                    powerGain = 7;
+                    actionName = '集中投資'; 
+                    break;
+                case 'scandal':
+                    executeScandal();
+                    return;
+            }
+
+            addLog(`【${currentPlayerParty.name}】${selectedRegion.name}で「${actionName}」を実行！支持率+${supportGain}%、戦力+${powerGain}`, 'player');
+            
+            changeSupport(selectedRegion, currentPlayerParty.id, supportGain);
+            currentPlayerParty.power += powerGain;
+
+            actionButtons.forEach(btn => btn.disabled = true);
+            actionInfo.textContent = "CPUのターン中...";
+            selectedRegion = null;
+            isPlayerTurn = false;
+            updateUI();
+            
+            setTimeout(executeCpuTurns, 1500);
+        }
+
+        function executeScandal() {
+            const targetParties = parties.filter(p => !p.isPlayer && p.seats > 10);
+            if (targetParties.length === 0) {
+                addLog("❌ スキャンダルを仕掛ける対象がいません（議席10以上の政党が必要）", "system");
+                return;
+            }
+
+            const target = targetParties[Math.floor(Math.random() * targetParties.length)];
+            const successRate = 0.6 + (currentPlayerParty.power / 200);
+            const success = Math.random() < successRate;
+
+            if (success) {
+                const seatsLost = Math.min(10, Math.floor(target.seats * 0.15));
+                target.seats -= seatsLost;
+                currentPlayerParty.seats += seatsLost;
+                target.power -= 5;
+                currentPlayerParty.power += 3;
+                
+                addLog(`💥【${currentPlayerParty.name}】${target.name}のスキャンダルを暴露！${target.name}が${seatsLost}議席を失い、あなたが獲得！`, 'scandal');
+            } else {
+                currentPlayerParty.power -= 10;
+                addLog(`⚠️【${currentPlayerParty.name}】スキャンダル暴露に失敗...逆に信頼を失った（戦力-10）`, 'scandal');
+            }
+
+            actionButtons.forEach(btn => btn.disabled = true);
+            actionInfo.textContent = "CPUのターン中...";
+            selectedRegion = null;
+            isPlayerTurn = false;
+            calculateAllSeats();
+            updateUI();
+            
+            setTimeout(executeCpuTurns, 1500);
+        }
+
+        function changeSupport(region, partyId, gain) {
+            const powerBonus = parties.find(p => p.id === partyId).power / 100;
+            const effectiveGain = gain * (1 + powerBonus);
+            
+            const otherParties = parties.filter(p => p.id != partyId);
+            let totalReduction = 0;
+
+            otherParties.forEach(p => {
+                const reduction = Math.min(region.support[p.id], effectiveGain * (region.support[p.id] / 100));
+                region.support[p.id] -= reduction;
+                totalReduction += reduction;
+            });
+
+            region.support[partyId] += totalReduction;
+            
+            let totalSupport = 0;
+            Object.values(region.support).forEach(s => totalSupport += s);
+            Object.keys(region.support).forEach(id => {
+                region.support[id] = (region.support[id] / totalSupport) * 100;
+            });
+        }
+
+        function executeCpuTurns() {
+            const cpuParties = parties.filter(p => !p.isPlayer);
+            let delay = 0;
+            
+            cpuParties.forEach((cpu, index) => {
+                setTimeout(() => {
+                    const shouldScandal = Math.random() < 0.15 && cpu.power > 40;
+                    
+                    if (shouldScandal) {
+                        const targets = parties.filter(p => p.id !== cpu.id && p.seats > 8);
+                        if (targets.length > 0) {
+                            const target = targets[Math.floor(Math.random() * targets.length)];
+                            const success = Math.random() < 0.5;
+                            
+                            if (success) {
+                                const seatsLost = Math.min(8, Math.floor(target.seats * 0.12));
+                                target.seats -= seatsLost;
+                                cpu.seats += seatsLost;
+                                cpu.power += 2;
+                                target.power -= 3;
+                                addLog(`💥【${cpu.name}】${target.name}にスキャンダル攻撃！${seatsLost}議席を奪取！`, 'scandal');
+                            } else {
+                                cpu.power -= 8;
+                                addLog(`⚠️【${cpu.name}】スキャンダル攻撃が失敗...`, 'cpu');
+                            }
+                            calculateAllSeats();
+                            updateUI();
+                        }
+                    } else {
+                        const randomRegion = regions[Math.floor(Math.random() * regions.length)];
+                        const actions = [
+                            { gain: 3, powerGain: 1, name: '街頭演説'},
+                            { gain: 6, powerGain: 2, name: '政策討論会'},
+                            { gain: 9, powerGain: 4, name: '大規模キャンペーン'}
+                        ];
+                        const randomAction = actions[Math.floor(Math.random() * actions.length)];
+
+                        changeSupport(randomRegion, cpu.id, randomAction.gain);
+                        cpu.power += randomAction.powerGain;
+                        addLog(`【${cpu.name}】${randomRegion.name}で「${randomAction.name}」実施（戦力+${randomAction.powerGain}）`, 'cpu');
+                        updateUI();
+                    }
+                    
+                    if (index === cpuParties.length - 1) {
+                        setTimeout(endTurn, 800);
+                    }
+                }, delay);
+                delay += 800;
+            });
+        }
+        
+        function endTurn() {
+            addLog(`📌 第${currentTurn}ターン終了。議席が再計算されました。`, "system");
+            calculateAllSeats();
+            currentTurn++;
+
+            if (currentTurn > maxTurns) {
+                showResults();
+            } else {
+                isPlayerTurn = true;
+                actionInfo.textContent = "選挙区を選択してください";
+                updateUI();
+            }
+        }
+        
+        function showResults() {
+            gameScreen.style.display = 'none';
+            resultScreen.style.display = 'block';
+
+            const sortedParties = [...parties].sort((a, b) => b.seats - a.seats);
+            const winner = sortedParties[0];
+
+            document.getElementById('winner-party-name').textContent = winner.name;
+            document.getElementById('winner-party-name').style.color = winner.color;
+            document.getElementById('winner-logo').src = winner.imageUrl;
+
+            const finalResultsList = document.getElementById('final-results');
+            finalResultsList.innerHTML = '';
+            sortedParties.forEach((p, index) => {
+                const li = document.createElement('li');
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}位`;
+                li.innerHTML = `
+                    <div class="result-party-info">
+                        <img src="${p.imageUrl}" class="result-party-logo" alt="${p.name}">
+                        <span class="party-name-result" style="color: ${p.color};">${medal} ${p.name}</span>
+                    </div>
+                    <span class="party-seats-result">${p.seats} 議席</span>
+                `;
+                finalResultsList.appendChild(li);
+            });
+        }
+
+        function addLog(message, type) {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = message;
+            logContainer.prepend(entry);
+        }
+    });
+    </script>
+</body>
+</html>
