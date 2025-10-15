@@ -968,7 +968,7 @@ if ('serviceWorker' in navigator) {
             sortedParties.forEach((p, index) => {
                 const li = document.createElement('li');
                 const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}位`;
-                li.innerHTML = `
+                li.innerHTML ruy= `
                     <div class="result-party-info">
                         <img src="${p.imageUrl}" class="result-party-logo" alt="${p.name}">
                         <span class="party-name-result" style="color: ${p.color};">${medal} ${p.name}</span>
