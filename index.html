@@ -41,6 +41,18 @@
             margin-bottom: 10px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
         }
+        .header-logo-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            margin-bottom: 10px;
+        }
+        .main-logo {
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+        }
 
         /* --- Setup Screen --- */
         #setup-screen {
@@ -430,8 +442,10 @@
 </head>
 <body>
     <div class="container">
-        <h1>超!!議会掌握</h1><center><img alt="ロゴ" src="icon192x192.png"></center>
-
+        <div class="header-logo-row">
+            <h1>超!!議会掌握</h1>
+            <img alt="ロゴ" src="icon192x192.png" class="main-logo">
+        </div>
         <div id="setup-screen">
             <h2>あなたの政党を立ち上げよう！</h2>
             <div class="form-group">
