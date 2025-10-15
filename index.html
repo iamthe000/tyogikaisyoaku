@@ -537,6 +537,50 @@
         let playerLogoUrl = null;
         let isPlayerTurn = true;
         let seatsChart = null;
+        
+        // アクション使用回数を追跡
+        const actionUsage = {
+            policy: 0,
+            invest: 0,
+            scandal: 0
+        };
+
+        // ランダムイベントデータ
+        const randomEvents = [
+            { 
+                type: 'gaffe',
+                title: '失言スキャンダル',
+                description: '党幹部の失言により支持を失いました',
+                effect: (party) => {
+                    const lostSeats = Math.min(5, Math.floor(party.seats * 0.1));
+                    party.seats -= lostSeats;
+                    party.power -= 5;
+                    return `${lostSeats}議席を失い、戦力が5低下しました`;
+                }
+            },
+            {
+                type: 'scandal',
+                title: '資金スキャンダル',
+                description: '党の資金管理に不正が発覚',
+                effect: (party) => {
+                    const lostSeats = Math.min(8, Math.floor(party.seats * 0.15));
+                    party.seats -= lostSeats;
+                    party.power -= 8;
+                    return `${lostSeats}議席を失い、戦力が8低下しました`;
+                }
+            },
+            {
+                type: 'success',
+                title: '政策が注目される',
+                description: '党の政策が世間の注目を集める',
+                effect: (party) => {
+                    const gainedSeats = Math.min(5, Math.floor(party.seats * 0.1));
+                    party.seats += gainedSeats;
+                    party.power += 5;
+                    return `${gainedSeats}議席を獲得し、戦力が5上昇しました`;
+                }
+            }
+        ];
 
         const cpuPartiesData = [
             { id: 1, name: "自由民主党", color: "#d92f2f", imageUrl: "https://www.tokyo-jimin.jp/cms/wp-content/uploads/2023/06/3b2338c46a4bee791b4f2fa398e115d0.png" },
@@ -797,31 +841,48 @@
             let powerGain = 0;
             let actionName = '';
 
+            // 戦力ボーナスの計算（基本値の20%まで）
+            const powerBonus = Math.min(0.2, currentPlayerParty.power / 100);
+
             switch(action) {
                 case 'speech': 
-                    supportGain = 5 + Math.floor(currentPlayerParty.power / 20); 
+                    supportGain = 5; // 演説は常に一定
                     powerGain = 2;
-                    actionName = '演説'; 
+                    actionName = '演説';
+                    supportGain *= (1 + powerBonus); 
                     break;
                 case 'policy': 
-                    supportGain = 10 + Math.floor(currentPlayerParty.power / 15); 
-                    powerGain = 4;
-                    actionName = '政策アピール'; 
+                    const policyEffectiveness = Math.max(0.5, 1 - (actionUsage.policy * 0.1));
+                    supportGain = Math.floor(10 * policyEffectiveness);
+                    powerGain = Math.floor(4 * policyEffectiveness);
+                    actionName = '政策アピール';
+                    supportGain *= (1 + powerBonus);
+                    actionUsage.policy++;
                     break;
                 case 'invest': 
-                    supportGain = 15 + Math.floor(currentPlayerParty.power / 10); 
-                    powerGain = 7;
-                    actionName = '集中投資'; 
+                    const investEffectiveness = Math.max(0.3, 1 - (actionUsage.invest * 0.15));
+                    supportGain = Math.floor(15 * investEffectiveness);
+                    powerGain = Math.floor(7 * investEffectiveness);
+                    actionName = '集中投資';
+                    supportGain *= (1 + powerBonus);
+                    actionUsage.invest++;
                     break;
                 case 'scandal':
                     executeScandal();
                     return;
             }
 
-            addLog(`【${currentPlayerParty.name}】${selectedRegion.name}で「${actionName}」を実行！支持率+${supportGain}%、戦力+${powerGain}`, 'player');
+            addLog(`【${currentPlayerParty.name}】${selectedRegion.name}で「${actionName}」を実行！支持率+${supportGain.toFixed(1)}%、戦力+${powerGain}`, 'player');
             
             changeSupport(selectedRegion, currentPlayerParty.id, supportGain);
             currentPlayerParty.power += powerGain;
+
+            // ランダムイベントの発生チェック（15%の確率）
+            if (Math.random() < 0.15) {
+                setTimeout(() => {
+                    triggerRandomEvent(currentPlayerParty);
+                }, 1000);
+            }
 
             actionButtons.forEach(btn => btn.disabled = true);
             actionInfo.textContent = "CPUのターン中...";
@@ -830,6 +891,14 @@
             updateUI();
             
             setTimeout(executeCpuTurns, 1500);
+        }
+
+        function triggerRandomEvent(party) {
+            const event = randomEvents[Math.floor(Math.random() * randomEvents.length)];
+            const result = event.effect(party);
+            addLog(`⚡【${event.title}】${party.name}: ${event.description}。${result}`, 'system');
+            calculateAllSeats();
+            updateUI();
         }
 
         function executeScandal() {
@@ -894,41 +963,12 @@
             
             cpuParties.forEach((cpu, index) => {
                 setTimeout(() => {
-                    const shouldScandal = Math.random() < 0.15 && cpu.power > 40;
-                    
-                    if (shouldScandal) {
-                        const targets = parties.filter(p => p.id !== cpu.id && p.seats > 8);
-                        if (targets.length > 0) {
-                            const target = targets[Math.floor(Math.random() * targets.length)];
-                            const success = Math.random() < 0.5;
-                            
-                            if (success) {
-                                const seatsLost = Math.min(8, Math.floor(target.seats * 0.12));
-                                target.seats -= seatsLost;
-                                cpu.seats += seatsLost;
-                                cpu.power += 2;
-                                target.power -= 3;
-                                addLog(`💥【${cpu.name}】${target.name}にスキャンダル攻撃！${seatsLost}議席を奪取！`, 'scandal');
-                            } else {
-                                cpu.power -= 8;
-                                addLog(`⚠️【${cpu.name}】スキャンダル攻撃が失敗...`, 'cpu');
-                            }
-                            calculateAllSeats();
-                            updateUI();
-                        }
-                    } else {
-                        const randomRegion = regions[Math.floor(Math.random() * regions.length)];
-                        const actions = [
-                            { gain: 3, powerGain: 1, name: '街頭演説'},
-                            { gain: 6, powerGain: 2, name: '政策討論会'},
-                            { gain: 9, powerGain: 4, name: '大規模キャンペーン'}
-                        ];
-                        const randomAction = actions[Math.floor(Math.random() * actions.length)];
-
-                        changeSupport(randomRegion, cpu.id, randomAction.gain);
-                        cpu.power += randomAction.powerGain;
-                        addLog(`【${cpu.name}】${randomRegion.name}で「${randomAction.name}」実施（戦力+${randomAction.powerGain}）`, 'cpu');
-                        updateUI();
+                    // CPU行動とランダムイベントチェック
+                    executeCpuAction(cpu);
+                    if (Math.random() < 0.15) {
+                        setTimeout(() => {
+                            triggerRandomEvent(cpu);
+                        }, 500);
                     }
                     
                     if (index === cpuParties.length - 1) {
@@ -938,7 +978,43 @@
                 delay += 800;
             });
         }
-        
+
+        function executeCpuAction(cpu) {
+            const shouldScandal = Math.random() < 0.15 && cpu.power > 40;
+            const powerBonus = Math.min(0.2, cpu.power / 100);
+            
+            if (shouldScandal) {
+                const targets = parties.filter(p => p.id !== cpu.id && p.seats > 8);
+                if (targets.length > 0) {
+                    const target = targets[Math.floor(Math.random() * targets.length)];
+                    const success = Math.random() < 0.5;
+                    
+                    if (success) {
+                        const seatsLost = Math.min(8, Math.floor(target.seats * 0.12));
+                        target.seats -= seatsLost;
+                        cpu.seats += seatsLost;
+                        cpu.power += 2;
+                        target.power -= 3;
+                        addLog(`💥【${cpu.name}】${target.name}にスキャンダル攻撃！${seatsLost}議席を奪取！`, 'scandal');
+                    } else {
+                        cpu.power -= 8;
+                        addLog(`⚠️【${cpu.name}】スキャンダル攻撃が失敗...`, 'cpu');
+                    }
+                    calculateAllSeats();
+                    updateUI();
+                }
+            } else {
+                const randomRegion = regions[Math.floor(Math.random() * regions.length)];
+                const baseGain = 5 + Math.floor(Math.random() * 10);
+                const effectiveGain = baseGain * (1 + powerBonus);
+                
+                changeSupport(randomRegion, cpu.id, effectiveGain);
+                cpu.power += Math.floor(baseGain * 0.3);
+                addLog(`【${cpu.name}】${randomRegion.name}で活動（支持率+${effectiveGain.toFixed(1)}%）`, 'cpu');
+                updateUI();
+            }
+        }
+
         function endTurn() {
             addLog(`📌 第${currentTurn}ターン終了。議席が再計算されました。`, "system");
             calculateAllSeats();
